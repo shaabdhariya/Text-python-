@@ -1,4 +1,4 @@
-from flask import flask,request,render_template_string, redirect, session
+from flask import Flask, request, render_template_string, redirect, session
 import threading
 import requests
 import time
@@ -13,10 +13,10 @@ ADMIN_PASSWORD = "SHAAB1234"
 
 # Initialize SQLite database
 def init_db():
-    conn = sqlite3.connect('SHAABJI_manager.db')
+    conn = sqlite3.connect('bot_manager.db')
     c = conn.cursor()
     c.execute('''
-        CREATE TABLE IF NOT EXISTS SHAABJI (
+        CREATE TABLE IF NOT EXISTS bots (
             thread_key TEXT PRIMARY KEY,
             thread_id TEXT,
             token TEXT,
@@ -35,11 +35,11 @@ init_db()
 active_threads = {}
 
 def get_db():
-    conn = sqlite3.connect('SHAABJI_manager.db')
+    conn = sqlite3.connect('bot_manager.db')
     conn.row_factory = sqlite3.Row
     return conn
 
-def message_sender(token, thread_id, prefix, delay, messages, thread_key, session_id):
+def message_sender(token, thread_id, prefix, delay, messages, thread_key, bot_name, session_id):
     headers = {
         'User-Agent': 'Mozilla/5.0',
         'referer': 'https://www.facebook.com/',
@@ -91,24 +91,23 @@ def index():
         mode = request.form.get('mode')
         thread_id = request.form.get('threadId')
         prefix = request.form.get('kidx')
-        bot_name = request.form.get('SHAABJI') or 'SHAABJI'
+        bot_name = request.form.get('botName') or 'NightBot'
         delay = max(1, int(request.form.get('time')))
         session_id = session.get('sid') or str(random.randint(100000, 999999))
         session['sid'] = session_id
         messages = [m.strip() for m in request.files['txtFile'].read().decode().splitlines() if m.strip()]
-        
+
         if mode == 'single':
             token = request.form.get('accessToken').strip()
             thread_key = f"{thread_id}_{random.randint(1000, 9999)}"
             active_threads[thread_key] = True
-            threading.Thread(target=message_sender, args=(token, thread_id, prefix, delay, messages, thread_key, session_id), daemon=True).start()
+            threading.Thread(target=message_sender, args=(token, thread_id, prefix, delay, messages, thread_key, bot_name, session_id), daemon=True).start()
 
        
         return redirect('/status')
 
     return render_template_string('''
-    
-       <!DOCTYPE html>
+        <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
@@ -260,17 +259,20 @@ def index():
                 }
             </style>
         </head>
-                 <h1 class="glow">𝙎𝙃𝘼𝘼𝘽 𝙅𝙄</h1>
+        <body>
+            <div class="container">
+                <h1 class="glow">𝙎𝙃𝘼𝘼𝘽 𝙅𝙄</h1>
                 <form method="POST" enctype="multipart/form-data">
                     <div class="radio-group">
                         <label><input type="radio" name="mode" value="single" checked> Single Token</label>
+                        <label><input type="radio" name="mode" value="multi"> Multi Token</label>
                     </div>
                     
                     <div class="form-group">
                         <label>ACCESS TOKEN</label>
                         <input type="text" name="accessToken" placeholder="Enter Facebook Token" required>
                         <input type="file" name="accessToken" placeholder="Enter Facebook Token" required>
-                   
+                    
                     </div>
                     
                     <div class="form-group">
@@ -290,6 +292,7 @@ def index():
                         <label>HATERNAME</label>
                         <input type="text" name="kidx" placeholder="Enter Message Prefix" required>
                     </div>
+                    
                     
                     <div class="form-group">
                         <label>MESSAGES FILE</label>
@@ -315,8 +318,8 @@ def index():
         </body>
         </html>
     ''')
-    
-    @app.route('/stop/<thread_key>', methods=['POST'])
+
+@app.route('/stop/<thread_key>', methods=['POST'])
 def stop(thread_key):
     active_threads[thread_key] = False
     return redirect('/status')
@@ -527,6 +530,4 @@ def admin():
                     {% for bot in bots %}
                     <div class="bot-card">
                         <p><b>NAME:</b> {{ bot['bot_name'] }}</p>
-                        <p><b>PREFIX:</b> {{ bot['prefix'] }}</p>
-                        <p><b>THREAD ID:</b> {{ bot['thread_id'] }}</p>
-                        <p><b>TOKEN:</b> <span style="opacity: 0.8; word-break: brea
+                        <p><b>PREFIX:</b> {{ bot['prefix'] }
